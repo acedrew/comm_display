@@ -8,10 +8,14 @@
 #include <SerialLCD.h>
 #include <Wire.h>
 
-#define PIXEL_PIN 6    // Digital IO pin connected to the NeoPixels.
+#define CENTER_PIXEL_PIN 6    // Digital IO pin connected to the NeoPixels.
+#define LEFT_PIXEL_PIN 1
+#define RIGHT_PIXEL_PIN 0
 #define KEYBOARD_DATA_PIN 8
 #define KEYBOARD_IRQ_PIN 5
-#define PIXEL_COUNT 288
+#define CENTER_PIXEL_COUNT 144
+#define LEFT_PIXEL_COUNT 72
+#define RIGHT_PIXEL_COUNT 72
 #define BUFFER_SIZE 8
 
 enum states { CONTROL_OPEN, LEFT_CONTROL, LEFT_SENDING, RIGHT_CONTROL, RIGHT_SENDING };
@@ -27,7 +31,9 @@ int i=0;
 //   NEO_GRB     Pixels are wired for GRB bitstream, correct for neopixel stick
 //   NEO_KHZ400  400 KHz bitstream (e.g. FLORA pixels)
 //   NEO_KHZ800  800 KHz bitstream (e.g. High Density LED strip), correct for neopixel stick
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel c_strip = Adafruit_NeoPixel(CENTER_PIXEL_COUNT, CENTER_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel l_strip = Adafruit_NeoPixel(LEFT_PIXEL_COUNT, LEFT_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel r_strip = Adafruit_NeoPixel(RIGHT_PIXEL_COUNT, RIGHT_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 SerialLCD lcd(2,16,0x28,I2C);
 char buffer[BUFFER_SIZE + 1];
@@ -39,8 +45,12 @@ void setup() {
   // Initialize LCD module
   lcd.init();
 
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
+  c_strip.begin();
+  l_strip.begin();
+  r_strip.begin();
+  c_strip.show(); // Initialize all pixels to 'off'
+  l_strip.show(); // Initialize all pixels to 'off'
+  r_strip.show(); // Initialize all pixels to 'off'
 
   keyboard.begin(KEYBOARD_DATA_PIN, KEYBOARD_IRQ_PIN);
   Serial.begin(9600);
@@ -72,7 +82,7 @@ void rightControl() {
         buffer[--charPointer] = 0;
     } else if (c == PS2_ENTER) {
       if (state == LEFT_CONTROL) {
-        sendShift = 224;
+        sendShift = CENTER_PIXEL_COUNT - 64;
         state = LEFT_SENDING;
       } else {
         sendShift = 0;
@@ -84,6 +94,7 @@ void rightControl() {
     }
 
     lcd.clear();
+    
     lcd.home();
     lcd.print(buffer);
     
@@ -93,7 +104,7 @@ void rightControl() {
 
 void rightSending() {
   sendShift++;
-  if (sendShift + 8 * BUFFER_SIZE > PIXEL_COUNT) {
+  if (sendShift + 8 * BUFFER_SIZE > CENTER_PIXEL_COUNT) {
     state = LEFT_CONTROL;
     return;
   }
@@ -110,14 +121,14 @@ void leftSending() {
 }
 
 void bitLights(char *buffer) {
-  strip.clear();
+  l_strip.clear();
   for (int i=0; i<8; i++) {
     for (int j=0; j<8; j++) {
       int pos = sendShift + i*8+j;
-      strip.setPixelColor( pos, (buffer[i] >> j) & 0x1 ? Wheel(pos+charPointer*i) : strip.Color(0,0,0) );
+      l_strip.setPixelColor( pos, (buffer[i] >> j) & 0x1 ? Wheel(pos+charPointer*i) : c_strip.Color(0,0,0) );
     }
   }
-  strip.show();
+  l_strip.show();
 }
 
 // Input a value 0 to 255 to get a color value.
@@ -125,12 +136,12 @@ void bitLights(char *buffer) {
 uint32_t Wheel(byte WheelPos) {
   WheelPos = 255 - WheelPos;
   if(WheelPos < 85) {
-   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+   return c_strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
   } else if(WheelPos < 170) {
     WheelPos -= 85;
-   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+   return c_strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   } else {
    WheelPos -= 170;
-   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+   return c_strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
   }
 }\

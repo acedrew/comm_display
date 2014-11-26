@@ -19,7 +19,7 @@ OctoWS2811 leds(ledsPerStrip, displayMemory, drawingMemory, config);
 
 #define KEYBOARD_DATA_PIN 0
 #define KEYBOARD_IRQ_PIN 1
-#define CENTER_PIXEL_COUNT 144
+#define CENTER_PIXEL_COUNT 600
 #define LEFT_PIXEL_COUNT 72
 #define RIGHT_PIXEL_COUNT 72
 #define BUFFER_SIZE 8
@@ -91,7 +91,7 @@ void rightControl() {
         buffer[--charPointer] = 0;
     } else if (c == PS2_ENTER) {
       if (state == LEFT_CONTROL) {
-        sendShift = CENTER_PIXEL_COUNT - 64;
+//        sendShift = CENTER_PIXEL_COUNT - 64;
         state = LEFT_SENDING;
       } else {
         sendShift = 0;
@@ -113,20 +113,20 @@ void rightControl() {
 
 void rightSending() {
   sendShift++;
-  if (sendShift + 8 * BUFFER_SIZE > CENTER_PIXEL_COUNT) {
+  bitLights(buffer);
+  if (sendShift + 8 * BUFFER_SIZE == ledsPerStrip * 3 - 72) {
     state = LEFT_CONTROL;
     return;
   }
-  bitLights(buffer);
 }
 
 void leftSending() {
   sendShift--;
+  bitLights(buffer);
   if (sendShift == 0) {
     state = RIGHT_CONTROL;
     return;
   }
-  bitLights(buffer);
 }
 
 void bitLights(char *buffer) {
@@ -134,7 +134,7 @@ void bitLights(char *buffer) {
   for (int i=0; i<8; i++) {
     for (int j=0; j<8; j++) {
       int pos = sendShift + i*8+j;
-      leds.setPixel( pos, (buffer[i] >> j) & 0x1 ? rainbowColors[pos] : 0
+      leds.setPixel( pos, (buffer[i] >> j) & 0x1 ? rainbowColors[pos % 180] : 0
       );
     }
   }
